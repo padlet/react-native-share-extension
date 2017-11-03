@@ -79,10 +79,12 @@ public class ShareModule extends ReactContextBaseJavaModule {
             // do nothing
         }
 
-        map.putString("type", type);
         WritableArray files = Arguments.createArray();
-        for (String file : values) {
-            files.pushString(file);
+        for (String value : values) {
+            WritableMap file = Arguments.createMap();
+            file.putString("type", type);
+            file.putString("value", value);
+            files.pushMap(file);
         }
         map.putArray("files", files);
 
