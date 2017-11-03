@@ -88,8 +88,8 @@ public class ShareModule extends ReactContextBaseJavaModule {
     }
 
     private Collection<? extends String> handleSendMultipleFiles(Intent intent) {
-        ArrayList<String> filePaths= new ArrayList<>();
-        ArrayList<Uri> uris = intent.getParcelableArrayListExtra(Intent.EXTRA_STREAM);
+        List<String> filePaths= new ArrayList<>();
+        List<Uri> uris = intent.getParcelableArrayListExtra(Intent.EXTRA_STREAM);
         if (uris != null) {
             for (Uri uri: uris) {
                 filePaths.add("file://" + RealPathUtil.getRealPathFromURI(getCurrentActivity(), uri));
