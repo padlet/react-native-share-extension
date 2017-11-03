@@ -58,27 +58,25 @@ RCT_REMAP_METHOD(data, resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPro
     __block NSInteger itemCount = attachments.count;
     NSMutableArray *output = [[NSMutableArray alloc] initWithCapacity:itemCount];
     for (NSItemProvider *item in attachments) {
-        NSLog(@"Loading item: %@",item);
-        if (item) {
-            bool success = [self getSharedItems:item withCallback:^(NSDictionary *data, NSException *exception) {
-                if (data) [output addObject:data];
-                if (--itemCount <= 0) {
-                    callback([output copy]);
-                }
-            }];
-            if (success == false) {
-                --itemCount;
+        bool success = [self getSharedItems:item withCallback:^(NSDictionary *data, NSException *exception) {
+            if (data && [data objectForKey:@"value"] && ![[data objectForKey:@"value"] isEqualToString:@""]) [output addObject:data];
+            if (--itemCount <= 0) {
+                callback([output copy]);
             }
-        } else {
-            --itemCount;
+        }];
+        if (success == false) {
+            if (--itemCount <= 0) {
+                callback([output copy]);
+            }
         }
     }
 }
 
 - (BOOL)getSharedItems:(NSItemProvider *)item withCallback:(void(^)(NSDictionary *data, NSException *exception))callback {
 
-    if (!callback) return false;
-
+    if (!callback || !item) return false;
+    bool succeeded = true;
+    
     @try {
         if([item hasItemConformingToTypeIdentifier:FILE_IDENTIFIER]) {
             [item loadItemForTypeIdentifier:FILE_IDENTIFIER options:nil completionHandler:^(id<NSSecureCoding> item, NSError *error) {
@@ -109,12 +107,15 @@ RCT_REMAP_METHOD(data, resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPro
             }];
         } else {
             callback(nil, [NSException exceptionWithName:@"Error" reason:@"couldn't find provider" userInfo:nil]);
+            succeeded = false;
         }
     }
     @catch (NSException *exception) {
         if (callback) callback(nil, exception);
+        succeeded = false;
     }
-    return true;
+    
+    return succeeded;
 }
 
 @end
