@@ -48,7 +48,7 @@ RCT_EXPORT_METHOD(close) {
 
 RCT_REMAP_METHOD(data, resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject)
 {
-    [self extractDataFromContext: extensionContext withCallback:^(NSArray *files) {
+    [self extractDataFromContext:extensionContext withCallback:^(NSArray *files) {
         resolve(@{@"files": files});
     }];
 }
