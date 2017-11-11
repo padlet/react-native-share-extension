@@ -5,8 +5,7 @@
 #define URL_IDENTIFIER @"public.url"
 #define IMAGE_IDENTIFIER @"public.image"
 #define TEXT_IDENTIFIER (NSString *)kUTTypePlainText
-//#define VIDEO_IDENTIFIER (NSString *)kUTTypeQuickTimeMovie
-#define VIDEO_IDENTIFIER (NSString *)kUTTypeAudiovisualContent
+#define VIDEO_IDENTIFIER (NSString *)kUTTypeQuickTimeMovie
 #define FILE_IDENTIFIER (NSString *)kUTTypeFileURL
 
 NSExtensionContext* extensionContext;
@@ -48,7 +47,7 @@ RCT_EXPORT_METHOD(close) {
 
 RCT_REMAP_METHOD(data, resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject)
 {
-    [self extractDataFromContext:extensionContext withCallback:^(NSArray *files) {
+    [self extractDataFromContext: extensionContext withCallback:^(NSArray *files) {
         resolve(@{@"files": files});
     }];
 }
@@ -58,64 +57,72 @@ RCT_REMAP_METHOD(data, resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPro
     __block NSInteger itemCount = attachments.count;
     NSMutableArray *output = [[NSMutableArray alloc] initWithCapacity:itemCount];
     for (NSItemProvider *item in attachments) {
-        bool success = [self getSharedItems:item withCallback:^(NSDictionary *data, NSException *exception) {
-            if (data && [data objectForKey:@"value"] && ![[data objectForKey:@"value"] isEqualToString:@""]) [output addObject:data];
-            if (--itemCount <= 0) {
-                callback([output copy]);
-            }
-        }];
-        if (success == false) {
-            if (--itemCount <= 0) {
-                callback([output copy]);
-            }
+        if (item) {
+            [self getSharedItems:item withCallback:^(NSDictionary *data, NSException *exception) {
+                if (data) [output addObject:data];
+                if (--itemCount <= 0) {
+                    callback([output copy]);
+                }
+            }];
+        } else {
+            --itemCount;
         }
     }
 }
 
-- (BOOL)getSharedItems:(NSItemProvider *)item withCallback:(void(^)(NSDictionary *data, NSException *exception))callback {
-
-    if (!callback || !item) return false;
-    bool succeeded = true;
-    
+- (void)getSharedItems:(NSItemProvider *)item withCallback:(void(^)(NSDictionary *data, NSException *exception))callback {
     @try {
         if([item hasItemConformingToTypeIdentifier:FILE_IDENTIFIER]) {
             [item loadItemForTypeIdentifier:FILE_IDENTIFIER options:nil completionHandler:^(id<NSSecureCoding> item, NSError *error) {
                 NSURL *url = (NSURL *)item;
-                callback(@{@"value":[url absoluteString], @"type":[[[url absoluteString] pathExtension] lowercaseString]}, nil);
+                if(callback) {
+                    callback(@{@"value":[url absoluteString], @"type":@"text/file"}, nil);
+                }
             }];
         }
-        else if ([item hasItemConformingToTypeIdentifier:IMAGE_IDENTIFIER]) {
+        else if([item hasItemConformingToTypeIdentifier:URL_IDENTIFIER]) {
+            [item loadItemForTypeIdentifier:URL_IDENTIFIER options:nil completionHandler:^(id<NSSecureCoding> item, NSError *error) {
+                NSURL *url = (NSURL *)item;
+                if(callback) {
+                    callback(@{@"value":[url absoluteString], @"type":@"text/url"}, nil);
+                }
+            }];
+        } else if ([item hasItemConformingToTypeIdentifier:IMAGE_IDENTIFIER]) {
             [item loadItemForTypeIdentifier:IMAGE_IDENTIFIER options:nil completionHandler:^(id<NSSecureCoding> item, NSError *error) {
                 NSURL *url = (NSURL *)item;
-                callback(@{@"value":[url absoluteString], @"type":[[[url absoluteString] pathExtension] lowercaseString]}, nil);
+
+                if(callback) {
+                    callback(@{@"value":[url absoluteString], @"type":[[[url absoluteString] pathExtension] lowercaseString]}, nil);
+                }
             }];
         } else if ([item hasItemConformingToTypeIdentifier:TEXT_IDENTIFIER]) {
             [item loadItemForTypeIdentifier:TEXT_IDENTIFIER options:nil completionHandler:^(id<NSSecureCoding> item, NSError *error) {
                 NSString *text = (NSString *)item;
-                callback(@{@"value":text, @"type":@"text/plain"}, nil);
+
+                if(callback) {
+                    callback(@{@"value":text, @"type":@"text/plain"}, nil);
+                }
             }];
         } else if ([item hasItemConformingToTypeIdentifier:VIDEO_IDENTIFIER]) {
             NSLog(@"[SHARE EXTENSION]: loading item for video identifier...");
             [item loadItemForTypeIdentifier:VIDEO_IDENTIFIER options:nil completionHandler:^(id<NSSecureCoding> item, NSError *error) {
                 NSURL *url = (NSURL *)item;
-                callback(@{@"value":[url absoluteString], @"type":[[[url absoluteString] pathExtension] lowercaseString]}, nil);
-            }];
-        } else if([item hasItemConformingToTypeIdentifier:URL_IDENTIFIER]) {
-            [item loadItemForTypeIdentifier:URL_IDENTIFIER options:nil completionHandler:^(id<NSSecureCoding> item, NSError *error) {
-                NSURL *url = (NSURL *)item;
-                callback(@{@"value":[url absoluteString], @"type":@"text/plain"}, nil);
+
+                if(callback) {
+                    callback(@{@"value":[url absoluteString], @"type":[[[url absoluteString] pathExtension] lowercaseString]}, nil);
+                }
             }];
         } else {
-            callback(nil, [NSException exceptionWithName:@"Error" reason:@"couldn't find provider" userInfo:nil]);
-            succeeded = false;
+            if(callback) {
+                callback(nil, [NSException exceptionWithName:@"Error" reason:@"couldn't find provider" userInfo:nil]);
+            }
         }
     }
     @catch (NSException *exception) {
-        if (callback) callback(nil, exception);
-        succeeded = false;
+        if(callback) {
+            callback(nil, exception);
+        }
     }
-    
-    return succeeded;
 }
 
 @end
