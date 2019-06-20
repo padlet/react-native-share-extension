@@ -64,8 +64,8 @@ public class ShareModule extends ReactContextBaseJavaModule {
             if (Intent.ACTION_SEND.equals(action) && !type.equals("")) {
                 if ("text/plain".equals(type)) {
                     values.add(handleSendText(intent)); // Handle text being sent
-                } else if (type.startsWith("image/") || type.startsWith("video/")) {
-                    values.add(handleSendFile(intent)); // Handle single image being sent
+                } else {
+                    values.add(handleSendFile(intent)); // Handle single file being sent
                 }
             } else if (Intent.ACTION_SEND_MULTIPLE.equals(action) && !type.equals("")) {
                 values.addAll(handleSendMultipleFiles(intent)); // Handle single image being sent
