@@ -96,7 +96,7 @@ public class ShareModule extends ReactContextBaseJavaModule {
         List<Uri> uris = intent.getParcelableArrayListExtra(Intent.EXTRA_STREAM);
         if (uris != null) {
             for (Uri uri: uris) {
-                filePaths.add("file://" + RealPathUtil.getRealPathFromURI(getCurrentActivity(), uri));
+                filePaths.add("file://" + getRealPath(uri));
             }
         }
         return filePaths;
@@ -105,10 +105,15 @@ public class ShareModule extends ReactContextBaseJavaModule {
 
     private String handleSendFile(Intent intent) {
         Uri uri = intent.getParcelableExtra(Intent.EXTRA_STREAM);
-        return "file://" + RealPathUtil.getRealPathFromURI(getCurrentActivity(), uri);
+        return "file://" + getRealPath(uri);
     }
 
     private String handleSendText(Intent intent) {
         return intent.getStringExtra(Intent.EXTRA_TEXT);
+    }
+
+    private String getRealPath(Uri uri) {
+        String result = RealPathUtilV2.getRealPathFromURI(getCurrentActivity(), uri);
+        return result != null ? result : RealPathUtil.getRealPathFromURI(getCurrentActivity(), uri);
     }
 }
