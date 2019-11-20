@@ -306,6 +306,8 @@ public class RealPathUtil {
 	}
 
 	public static String getPath(final Context context, final Uri uri) {
-		return uri.toString();
+		String absolutePath = getRealPathFromURI(context, uri);
+		// String absolutePath = getLocalPath(context, uri);
+		return absolutePath != null ? absolutePath : uri.toString();
 	}
 }
