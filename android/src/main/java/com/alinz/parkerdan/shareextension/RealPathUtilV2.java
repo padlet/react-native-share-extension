@@ -12,14 +12,20 @@ import android.database.Cursor;
 import android.net.Uri;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import android.util.Log;
+
+import android.util.Base64;
 import android.provider.OpenableColumns;
+import android.webkit.MimeTypeMap;
 
 import java.io.File;
 import java.io.BufferedOutputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.ByteBuffer;
+import java.util.Calendar;
+import java.util.Locale;
+import java.util.UUID;
 
 /** Real Path Util V2
  * This is our own custom build real path utility which doesn't rely on content resolvers and media
@@ -48,10 +54,13 @@ public class RealPathUtilV2 {
      * and then move the file to the new directory. The method will return null if this fails, in
      * which case we will want to default back to the original RealPathUtil.
      */
+    @SuppressWarnings("ResultOfMethodCallIgnored")
     public static @Nullable String createFileInTempPath(Context context, Uri uri) {
         String fileName = getFileName(context, uri);
         File cacheDir = new File(context.getCacheDir(), SUB_DIRECTORY);
-        if (!cacheDir.exists()) cacheDir.mkdirs();
+        if (!cacheDir.exists()) {
+            cacheDir.mkdirs();
+        }
         File file = new File(cacheDir, fileName);
         try {
             file.createNewFile();
@@ -59,11 +68,8 @@ public class RealPathUtilV2 {
         catch(Exception e) {
             e.printStackTrace();
         }
-        String destinationPath = null;
-        if (file != null) {
-            destinationPath = file.getAbsolutePath();
-            saveFileFromUri(context, uri, destinationPath);
-        }
+        String destinationPath = file.getAbsolutePath();
+        saveFileFromUri(context, uri, destinationPath);
         return destinationPath;
     }
 
@@ -90,19 +96,11 @@ public class RealPathUtilV2 {
         }
     }
 
-    public static String getFileName(@NonNull Context context, Uri uri) {
+    public static @NonNull String getFileName(@NonNull Context context, Uri uri) {
         String mimeType = context.getContentResolver().getType(uri);
         String filename = null;
 
-        if (mimeType == null && context != null) {
-            String path = getPath(context, uri);
-            if (path == null) {
-                filename = getName(uri.toString());
-            } else {
-                File file = new File(path);
-                filename = file.getName();
-            }
-        } else {
+        if (mimeType != null) {
             Cursor returnCursor = context.getContentResolver().query(uri, null,
                     null, null, null);
             if (returnCursor != null) {
@@ -110,6 +108,32 @@ public class RealPathUtilV2 {
                 returnCursor.moveToFirst();
                 filename = returnCursor.getString(nameIndex);
                 returnCursor.close();
+            }
+        }
+
+        // Generate a file name
+        if (filename == null) {
+            Calendar calendar = Calendar.getInstance();
+            filename = String.format(Locale.US, "%04d%02d%02d_%02d%02d%02d",
+                    calendar.get(Calendar.YEAR),
+                    calendar.get(Calendar.MONTH),
+                    calendar.get(Calendar.DATE),
+                    calendar.get(Calendar.HOUR),
+                    calendar.get(Calendar.MINUTE),
+                    calendar.get(Calendar.SECOND));
+            // Add a unique signature
+            UUID uuid = UUID.randomUUID();
+            ByteBuffer buffer = ByteBuffer.wrap(new byte[16]);
+            buffer.putLong(uuid.getMostSignificantBits());
+            buffer.putLong(uuid.getLeastSignificantBits());
+            String signature = Base64.encodeToString(buffer.array(), Base64.URL_SAFE | Base64.NO_PADDING | Base64.NO_WRAP);
+            filename += "_" + signature;
+
+            if (mimeType != null) {
+                String fileExtension = MimeTypeMap.getSingleton().getExtensionFromMimeType(mimeType);
+                if (fileExtension != null) {
+                    filename += "." + fileExtension;
+                }
             }
         }
 
